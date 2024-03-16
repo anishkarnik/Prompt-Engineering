@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Image Generation System</title>
+    <style>
+      /* Define CSS for the loading spinner */
+      .loader {
+        border: 4px solid rgba(0, 0, 0, 0.1);
+        border-left-color: #3498db;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        animation: spin 1s linear infinite;
+        margin-right: 10px;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Image Generation System</h1>
+    <div>
+      <label for="text">Text:</label>
+      <input type="text" id="text" name="text" />
+    </div>
+    <div>
+      <label for="providers">Providers:</label>
+      <select id="providers" name="providers">
+        <option value="openai">OpenAI</option>
+        <option value="other_provider">Other Provider</option>
+        <!-- Add more options for providers as needed -->
+      </select>
+    </div>
+
+    <div>
+      <label for="resolution">Resolution:</label>
+      <input type="text" id="resolution" name="resolution" />
+    </div>
+    <!-- Add the loading spinner here -->
+    <button onclick="generateImages()">
+      <span class="loader"></span> Generate Images
+    </button>
+    <div id="imageContainer">
+      <!-- Images will be displayed here -->
+    </div>
+    <!-- Add a section to display past images -->
+    <h2>Past Generated Images</h2>
+    <div id="pastImagesContainer">
+      <!-- Past images will be displayed here -->
+    </div>
+    <h1>Upload Image</h1>
+    <!-- Modify the form action to point to the upload endpoint -->
+    <form action="/upload_image" method="post" enctype="multipart/form-data">
+      <input type="file" name="file" accept="image/*" />
+      <input type="submit" value="Upload" />
+    </form>
+
+    <script>
+      // Function to disable the generate button and show loading spinner
+      function disableGenerateButton() {
+        const button = document.querySelector("button");
+        button.disabled = true;
+        button.innerHTML = `<span class="loader"></span> Generating...`;
+      }
+
+      // Function to enable the generate button and reset its text
+      function enableGenerateButton() {
+        const button = document.querySelector("button");
+        button.disabled = false;
+        button.innerHTML = "Generate Images";
+      }
+
+      // Async function to call API
+      async function generateImages() {
+        // Disable the button and show loading spinner
+        disableGenerateButton();
+
+        const text = document.getElementById("text").value;
+        const resolution = document.getElementById("resolution").value;
+        const providers = document.getElementById("providers").value;
+
+        const requestData = {
+          text: text,
+          resolution: resolution,
+          providers: providers,
+        };
+
+        // Use await, to wait for the response
+        await fetch("/generate_image", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(requestData),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            // Check if the response contains images
+            if (
+              data.openai.status === "success" &&
+              data.openai &&
+              data.openai.items
+            ) {
+              // Get the container element where images will be displayed
+              const imageContainer = document.getElementById("imageContainer");
+              // Clear previous content
+              imageContainer.innerHTML = "";
+
+              // Iterate over the items array and create img elements for each image
+              data.openai.items.forEach((item) => {
+                const imageUrl = item.image_resource_url;
+                const imgElement = document.createElement("img");
+                imgElement.src = imageUrl;
+                imgElement.style.width = "512px";
+                imgElement.style.height = "512px"; // Adjust the width as needed
+                imgElement.style.marginRight = "10px";
+                imgElement.style.marginBottom = "10px";
+                // Append the img element to the container
+                imageContainer.appendChild(imgElement);
+
+                // Store the image URL in local storage for later retrieval
+                storePastImage(imageUrl);
+              });
+            } else {
+              // Handle case where response does not contain images
+              alert("Some Error occurred while getting the image!");
+            }
+          })
+          .catch((error) => console.error("Error:", error))
+          .finally(() => {
+            // Enable the button again after response is received
+            enableGenerateButton();
+          });
+      }
+
+      // Function to store the generated image URL in local storage
+      function storePastImage(imageUrl) {
+        // Retrieve existing past images or initialize as an empty array
+        const pastImages = JSON.parse(localStorage.getItem("pastImages")) || [];
+        // Add the new image URL to the array
+        pastImages.push(imageUrl);
+        // Store the updated array back in local storage
+        localStorage.setItem("pastImages", JSON.stringify(pastImages));
+        // Display the past images
+        displayPastImages();
+      }
+
+      // Function to display the past images
+      function displayPastImages() {
+        const pastImagesContainer = document.getElementById(
+          "pastImagesContainer"
+        );
+        // Clear previous content
+        pastImagesContainer.innerHTML = "";
+
+        // Retrieve past images from local storage
+        const pastImages = JSON.parse(localStorage.getItem("pastImages")) || [];
+
+        // Create img elements for each past image and append them to the container
+        pastImages.forEach((imageUrl) => {
+          const imgElement = document.createElement("img");
+          imgElement.src = imageUrl;
+          imgElement.style.width = "150px";
+          imgElement.style.height = "150px"; // Adjust the width and height as needed
+          imgElement.style.marginRight = "10px";
+          imgElement.style.marginBottom = "10px";
+          pastImagesContainer.appendChild(imgElement);
+        });
+      }
+
+      // Display past images when the page loads
+      displayPastImages();
+    </script>
+  </body>
+</html>
