@@ -1,13 +1,10 @@
-from flask import Flask, render_template, request, redirect, url_for, jsonify
+from flask import Flask, render_template, request, redirect, jsonify, session
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import requests
-import os
 
 app = Flask(__name__)
-# Define the upload folder
-UPLOAD_FOLDER = 'D:/react_for_TechFest/assests_image'
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.secret_key = b'_5#y2L"F4Q8z\n\xec]/'  # Set a secret key for the session
 
 # Database connection parameters
 DB_HOST = "localhost"
@@ -22,7 +19,7 @@ def get_db_connection():
 
 # Define the API endpoint for image generation
 IMAGE_GENERATION_API = "https://api.edenai.run/v2/image/generation"
-BEARER_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiYjNjYmIxM2QtYTMzOC00ODNhLWFkNzgtYmI3Nzc0YTQwNTBhIiwidHlwZSI6ImFwaV90b2tlbiJ9.w4vXBtpZ3tFJaP7S3ErIQkHjUt3WZNFQs76cuoGjhoc"  # Replace this with your actual bearer token
+BEARER_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiOGYyYTQ3MDUtOWY2Mi00NjkwLWIwMGEtMTAxMjM4YjllNWZhIiwidHlwZSI6ImFwaV90b2tlbiJ9.tmqCohbKKvHk_MREpzVgC9NteYuWJbc-edMek3_hJ-Q"  # Replace this with your actual bearer token
 
 # Define your login route
 @app.route('/', methods=['GET', 'POST'])
@@ -32,12 +29,18 @@ def index():
             data = request.form
             username = data['username']
             email = data['email']
+            full_name = data['fullname']
+            phone_number = data['phonenumber']
+            college_name = data['collegename']
             lab = data['lab']
+            
+            # Store username in session
+            session['username'] = username
             
             conn = get_db_connection()
             cur = conn.cursor(cursor_factory=RealDictCursor)
-            cur.execute('INSERT INTO users (username, email, lab) VALUES (%s, %s, %s)',
-                        (username, email, lab))
+            cur.execute('INSERT INTO users (username, email, lab, fullname, phonenumber, collegename) VALUES (%s, %s, %s, %s, %s, %s)',
+                        (username, email, lab, full_name, phone_number, college_name))
             conn.commit()
             cur.close()
             conn.close()
@@ -79,22 +82,29 @@ def generate_image():
     else:
         return render_template('generate_image.html')
 
-# Define the endpoint and function for handling the image upload
-@app.route('/upload_image', methods=['POST'])
-def upload_image():
-    if 'file' not in request.files:
-        return redirect(request.url)
+# Define the route to submit the selected image to the database
+@app.route('/submit_image', methods=['POST'])
+def submit_image():
+    selected_image_url = request.form.get('selectedImageUrl')
+    if selected_image_url:
+        # Fetch the user's details from the session
+        username = session.get('username')
 
-    file = request.files['file']
-
-    if file.filename == '':
-        return redirect(request.url)
-
-    if file:
-        # Save the uploaded file to the upload folder
-        filename = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
-        file.save(filename)
-        return redirect(url_for('index'))
+        if username is None:
+            # If username is not found in the session, return an error response
+            return jsonify({'status': 'error', 'message': 'Username not found. Please log in.'}), 401
+        try:
+            conn = get_db_connection()
+            cur = conn.cursor()
+            cur.execute('UPDATE users SET image_url = %s WHERE username = %s', (selected_image_url, username))
+            conn.commit()
+            cur.close()
+            conn.close()
+            return jsonify({'status': 'success', 'message': 'Image submitted successfully'})
+        except Exception as e:
+            return jsonify({'status': 'error', 'message': str(e)}), 500
+    else:
+        return jsonify({'status': 'error', 'message': 'No image selected'})
 
 if __name__ == '__main__':
     app.run(debug=True)

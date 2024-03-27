@@ -10,8 +10,8 @@
         border: 4px solid rgba(0, 0, 0, 0.1);
         border-left-color: #3498db;
         border-radius: 50%;
-        width: 30px;
-        height: 30px;
+        width: 50px;
+        height: 50px;
         animation: spin 1s linear infinite;
         margin-right: 10px;
       }
@@ -51,14 +51,12 @@
     </div>
     <!-- Add a section to display past images -->
     <h2>Past Generated Images</h2>
-    <div id="pastImagesContainer">
-      <!-- Past images will be displayed here -->
-    </div>
-    <h1>Upload Image</h1>
-    <!-- Modify the form action to point to the upload endpoint -->
-    <form action="/upload_image" method="post" enctype="multipart/form-data">
-      <input type="file" name="file" accept="image/*" />
-      <input type="submit" value="Upload" />
+    <div id="pastImagesContainer"></div>
+
+    <h1>Submit Image</h1>
+    <form id="submitForm" method="post" action="/submit_image">
+      <input type="hidden" id="selectedImageUrl" name="selectedImageUrl" />
+      <input type="submit" value="Submit" />
     </form>
 
     <script>
@@ -91,52 +89,56 @@
           providers: providers,
         };
 
-        // Use await, to wait for the response
-        await fetch("/generate_image", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(requestData),
-        })
-          .then((response) => response.json())
-          .then((data) => {
-            // Check if the response contains images
-            if (
-              data.openai.status === "success" &&
-              data.openai &&
-              data.openai.items
-            ) {
-              // Get the container element where images will be displayed
-              const imageContainer = document.getElementById("imageContainer");
-              // Clear previous content
-              imageContainer.innerHTML = "";
-
-              // Iterate over the items array and create img elements for each image
-              data.openai.items.forEach((item) => {
-                const imageUrl = item.image_resource_url;
-                const imgElement = document.createElement("img");
-                imgElement.src = imageUrl;
-                imgElement.style.width = "512px";
-                imgElement.style.height = "512px"; // Adjust the width as needed
-                imgElement.style.marginRight = "10px";
-                imgElement.style.marginBottom = "10px";
-                // Append the img element to the container
-                imageContainer.appendChild(imgElement);
-
-                // Store the image URL in local storage for later retrieval
-                storePastImage(imageUrl);
-              });
-            } else {
-              // Handle case where response does not contain images
-              alert("Some Error occurred while getting the image!");
-            }
-          })
-          .catch((error) => console.error("Error:", error))
-          .finally(() => {
-            // Enable the button again after response is received
-            enableGenerateButton();
+        try {
+          // Use await, to wait for the response
+          const response = await fetch("/generate_image", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(requestData),
           });
+
+          const data = await response.json();
+          // Check if the response contains images
+          if (
+            data.openai &&
+            data.openai.status === "success" &&
+            data.openai.items
+          ) {
+            // Get the container element where images will be displayed
+            const imageContainer = document.getElementById("imageContainer");
+            // Clear previous content
+            imageContainer.innerHTML = "";
+
+            // Iterate over the items array and create img elements for each image
+            data.openai.items.forEach((item) => {
+              const imageUrl = item.image_resource_url;
+              const imgElement = document.createElement("img");
+              imgElement.src = imageUrl;
+              imgElement.style.width = "512px";
+              imgElement.style.height = "512px"; // Adjust the width as needed
+              imgElement.style.marginRight = "10px";
+              imgElement.style.marginBottom = "10px";
+              // Append the img element to the container
+              imageContainer.appendChild(imgElement);
+
+              // Store the image URL in local storage for later retrieval
+              storePastImage(imageUrl);
+            });
+          } else {
+            // Handle case where response does not contain images
+            alert("Some Error occurred while getting the image!");
+          }
+        } catch (error) {
+          console.error("Error:", error);
+          alert(
+            "An error occurred while generating the image. Please try again."
+          );
+        } finally {
+          // Enable the button again after response is received
+          enableGenerateButton();
+        }
       }
 
       // Function to store the generated image URL in local storage
@@ -170,12 +172,58 @@
           imgElement.style.height = "150px"; // Adjust the width and height as needed
           imgElement.style.marginRight = "10px";
           imgElement.style.marginBottom = "10px";
+          imgElement.setAttribute("onclick", `selectPastImage('${imageUrl}')`); // Add onclick attribute to select image
           pastImagesContainer.appendChild(imgElement);
+
+          // Add submit button below each past image
+          const submitButton = document.createElement("button");
+          // submitButton.textContent = "Submit";
+          submitButton.addEventListener("click", function () {
+            submitSelectedImage(imageUrl);
+          });
+          pastImagesContainer.appendChild(submitButton);
         });
       }
 
       // Display past images when the page loads
       displayPastImages();
+
+      // Function to send the selected image URL to the backend upon submission
+      async function submitSelectedImage(selectedImageUrl) {
+        try {
+          const response = await fetch("/submit_image", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ selectedImageUrl }),
+          });
+
+          const responseData = await response.json();
+          // Handle the response if needed
+          console.log(responseData);
+        } catch (error) {
+          console.error("Error:", error);
+        }
+      }
+
+      // Function to select the past image for submission
+      function selectPastImage(imageUrl) {
+        // Set the selected image URL in the hidden input field
+        document.getElementById("selectedImageUrl").value = imageUrl;
+        // Indicate visually that the image is selected (optional)
+        const pastImagesContainer = document.getElementById(
+          "pastImagesContainer"
+        );
+        const allImages = pastImagesContainer.querySelectorAll("img");
+        allImages.forEach(
+          (img) => (img.style.border = "2px solid transparent")
+        );
+        const selectedImage = pastImagesContainer.querySelector(
+          `img[src='${imageUrl}']`
+        );
+        selectedImage.style.border = "4px solid black";
+      }
     </script>
   </body>
 </html>
