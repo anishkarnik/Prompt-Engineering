@@ -18,8 +18,8 @@ def get_db_connection():
     return conn
 
 # Define the API endpoint for image generation
-IMAGE_GENERATION_API = "https://api.edenai.run/v2/image/generation"
-BEARER_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiOGYyYTQ3MDUtOWY2Mi00NjkwLWIwMGEtMTAxMjM4YjllNWZhIiwidHlwZSI6ImFwaV90b2tlbiJ9.tmqCohbKKvHk_MREpzVgC9NteYuWJbc-edMek3_hJ-Q"  # Replace this with your actual bearer token
+IMAGE_GENERATION_API = "https://modelslab.com/api/v6/realtime/text2img"
+  # Replace this with your actual bearer token
 
 # Define your login route
 @app.route('/', methods=['GET', 'POST'])
@@ -62,15 +62,17 @@ def generate_image():
 
         # Prepare data for the API call
         payload = {
-            "text": data.get('text', ''),
-            "resolution": data.get('resolution', ''),
+            "key" : "bK7OnLhSufswiXktBY38IDbPP4TlzJSAiPcW9GyLHtilcngZoVE8zAGYpips",
+            "prompt": data.get('prompt', ''),
+            "width": data.get('width', ''),
+            "height": data.get('height', ''),               
             "providers": data.get('providers', ''),  # Handle the case where 'providers' might not exist
-            "fallback_providers": data.get('fallback_providers', '')
+            "fallback_providers": data.get('fallback_providers', ''),
+             "safety_checker": True  # Make safety_checker static
         }
 
         # Set up headers with the bearer token
         headers = {
-            'Authorization': f'Bearer {BEARER_TOKEN}',
             'Content-Type': 'application/json'
         }
 

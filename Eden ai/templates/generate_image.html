@@ -26,24 +26,30 @@
   <body>
     <h1>Image Generation System</h1>
     <div>
-      <label for="text">Text:</label>
-      <input type="text" id="text" name="text" />
+      <label for="prompt">Prompt:</label>
+      <input type="text" id="prompt" name="prompt" />
     </div>
     <div>
       <label for="providers">Providers:</label>
       <select id="providers" name="providers">
-        <option value="openai">OpenAI</option>
+        <option value="sdxl">SDXL</option>
         <option value="other_provider">Other Provider</option>
         <!-- Add more options for providers as needed -->
       </select>
     </div>
 
     <div>
-      <label for="resolution">Resolution:</label>
-      <input type="text" id="resolution" name="resolution" />
+      <label for="width">Width:</label>
+      <input type="text" id="width" name="width" />
+    </div>
+    <div>
+      <label for="height">Height:</label>
+      <!-- Fixed typo in label -->
+      <input type="text" id="height" name="height" />
     </div>
     <!-- Add the loading spinner here -->
-    <button onclick="generateImages()">
+    <button onclick="generateImages()" id="generateButton">
+      <!-- Added an id to the button for easy reference -->
       <span class="loader"></span> Generate Images
     </button>
     <div id="imageContainer">
@@ -62,14 +68,14 @@
     <script>
       // Function to disable the generate button and show loading spinner
       function disableGenerateButton() {
-        const button = document.querySelector("button");
+        const button = document.getElementById("generateButton");
         button.disabled = true;
         button.innerHTML = `<span class="loader"></span> Generating...`;
       }
 
       // Function to enable the generate button and reset its text
       function enableGenerateButton() {
-        const button = document.querySelector("button");
+        const button = document.getElementById("generateButton");
         button.disabled = false;
         button.innerHTML = "Generate Images";
       }
@@ -79,18 +85,20 @@
         // Disable the button and show loading spinner
         disableGenerateButton();
 
-        const text = document.getElementById("text").value;
-        const resolution = document.getElementById("resolution").value;
+        const prompt = document.getElementById("prompt").value;
+        const width = document.getElementById("width").value;
+        const height = document.getElementById("height").value;
         const providers = document.getElementById("providers").value;
 
         const requestData = {
-          text: text,
-          resolution: resolution,
+          prompt: prompt,
+          width: width,
+          height: height,
           providers: providers,
+          safety_checker: true,
         };
 
         try {
-          // Use await, to wait for the response
           const response = await fetch("/generate_image", {
             method: "POST",
             headers: {
@@ -99,36 +107,35 @@
             body: JSON.stringify(requestData),
           });
 
-          const data = await response.json();
-          // Check if the response contains images
-          if (
-            data.openai &&
-            data.openai.status === "success" &&
-            data.openai.items
-          ) {
-            // Get the container element where images will be displayed
+          const responseData = await response.json();
+
+          if (response.ok) {
+            // Clear previous images
             const imageContainer = document.getElementById("imageContainer");
-            // Clear previous content
             imageContainer.innerHTML = "";
 
-            // Iterate over the items array and create img elements for each image
-            data.openai.items.forEach((item) => {
-              const imageUrl = item.image_resource_url;
+            // Check if output is available in the response
+            if (responseData.output && responseData.output.length > 0) {
+              // Create img element and set its attributes
+              const imageUrl = responseData.output[0];
               const imgElement = document.createElement("img");
               imgElement.src = imageUrl;
               imgElement.style.width = "512px";
-              imgElement.style.height = "512px"; // Adjust the width as needed
+              imgElement.style.height = "512px";
               imgElement.style.marginRight = "10px";
               imgElement.style.marginBottom = "10px";
-              // Append the img element to the container
+              // Append img element to the container
               imageContainer.appendChild(imgElement);
 
               // Store the image URL in local storage for later retrieval
               storePastImage(imageUrl);
-            });
+            } else {
+              // Handle case where no images are returned
+              alert("No images generated.");
+            }
           } else {
-            // Handle case where response does not contain images
-            alert("Some Error occurred while getting the image!");
+            // Handle non-success response
+            alert("Error: " + responseData.message);
           }
         } catch (error) {
           console.error("Error:", error);
