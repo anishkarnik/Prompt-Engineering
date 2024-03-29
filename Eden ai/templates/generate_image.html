@@ -55,9 +55,6 @@
     <div id="imageContainer">
       <!-- Images will be displayed here -->
     </div>
-    <!-- Add a section to display past images -->
-    <h2>Past Generated Images</h2>
-    <div id="pastImagesContainer"></div>
 
     <h1>Submit Image</h1>
     <form id="submitForm" method="post" action="/submit_image">
@@ -126,9 +123,7 @@
               imgElement.style.marginBottom = "10px";
               // Append img element to the container
               imageContainer.appendChild(imgElement);
-
-              // Store the image URL in local storage for later retrieval
-              storePastImage(imageUrl);
+              console.log(imageUrl);
             } else {
               // Handle case where no images are returned
               alert("No images generated.");
@@ -139,61 +134,11 @@
           }
         } catch (error) {
           console.error("Error:", error);
-          alert(
-            "An error occurred while generating the image. Please try again."
-          );
         } finally {
           // Enable the button again after response is received
           enableGenerateButton();
         }
       }
-
-      // Function to store the generated image URL in local storage
-      function storePastImage(imageUrl) {
-        // Retrieve existing past images or initialize as an empty array
-        const pastImages = JSON.parse(localStorage.getItem("pastImages")) || [];
-        // Add the new image URL to the array
-        pastImages.push(imageUrl);
-        // Store the updated array back in local storage
-        localStorage.setItem("pastImages", JSON.stringify(pastImages));
-        // Display the past images
-        displayPastImages();
-      }
-
-      // Function to display the past images
-      function displayPastImages() {
-        const pastImagesContainer = document.getElementById(
-          "pastImagesContainer"
-        );
-        // Clear previous content
-        pastImagesContainer.innerHTML = "";
-
-        // Retrieve past images from local storage
-        const pastImages = JSON.parse(localStorage.getItem("pastImages")) || [];
-
-        // Create img elements for each past image and append them to the container
-        pastImages.forEach((imageUrl) => {
-          const imgElement = document.createElement("img");
-          imgElement.src = imageUrl;
-          imgElement.style.width = "150px";
-          imgElement.style.height = "150px"; // Adjust the width and height as needed
-          imgElement.style.marginRight = "10px";
-          imgElement.style.marginBottom = "10px";
-          imgElement.setAttribute("onclick", `selectPastImage('${imageUrl}')`); // Add onclick attribute to select image
-          pastImagesContainer.appendChild(imgElement);
-
-          // Add submit button below each past image
-          const submitButton = document.createElement("button");
-          // submitButton.textContent = "Submit";
-          submitButton.addEventListener("click", function () {
-            submitSelectedImage(imageUrl);
-          });
-          pastImagesContainer.appendChild(submitButton);
-        });
-      }
-
-      // Display past images when the page loads
-      displayPastImages();
 
       // Function to send the selected image URL to the backend upon submission
       async function submitSelectedImage(selectedImageUrl) {
@@ -212,24 +157,6 @@
         } catch (error) {
           console.error("Error:", error);
         }
-      }
-
-      // Function to select the past image for submission
-      function selectPastImage(imageUrl) {
-        // Set the selected image URL in the hidden input field
-        document.getElementById("selectedImageUrl").value = imageUrl;
-        // Indicate visually that the image is selected (optional)
-        const pastImagesContainer = document.getElementById(
-          "pastImagesContainer"
-        );
-        const allImages = pastImagesContainer.querySelectorAll("img");
-        allImages.forEach(
-          (img) => (img.style.border = "2px solid transparent")
-        );
-        const selectedImage = pastImagesContainer.querySelector(
-          `img[src='${imageUrl}']`
-        );
-        selectedImage.style.border = "4px solid black";
       }
     </script>
   </body>
