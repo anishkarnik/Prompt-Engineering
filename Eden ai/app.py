@@ -6,7 +6,7 @@ from datetime import datetime
 from flask_allowedhosts import limit_hosts
 
 app = Flask(__name__)
-app.secret_key = b'_5#y2L"F4Q8z\n\xec]/'  # Set a secret key for the session
+app.secret_key = b'SECRET_Key'  # Set a secret key for the session
 app.config['DEBUG'] = False  # Disable the Flask debugger
 
 # Database connection parameters
