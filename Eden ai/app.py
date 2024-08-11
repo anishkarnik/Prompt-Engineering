@@ -13,7 +13,7 @@ app.config['DEBUG'] = False  # Disable the Flask debugger
 DB_HOST = "localhost"
 DB_NAME = "postgres"
 DB_USER = "postgres"
-DB_PASS = "rudra@5105"
+DB_PASS = "example@password"
 
 # Establish a database connection
 def get_db_connection():
